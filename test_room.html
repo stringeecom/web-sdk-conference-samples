@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Stringee Video Test</title>
+        <meta charset="utf-8">
+
+        <link rel="stylesheet" href="css/style.css">
+        <style>
+            #answerBtn, #rejectBtn {
+                background-color: green;
+                color: white;
+            }
+            #incoming-call-div {
+                display: none;
+            }
+        </style>
+
+        <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+        <script type="text/javascript" src="js/latest.sdk.bundle.min.js"></script>
+
+        <script type="text/javascript">
+            var userId;
+
+            var stringeeClient;
+            var getTokenUrl;
+
+            var roomId = "room-vn-1-TC0F51H8BP-1589370038786";
+            var roomToken;
+            var room;
+            var localTracks = [];
+            var subscribedTracks = [];
+
+            getTokenUrl = 'php/token_pro.php';
+
+            function isSafari() {
+                var ua = navigator.userAgent.toLowerCase();
+                if (ua.indexOf('safari') != -1) {
+                    if (ua.indexOf('chrome') > -1) {
+                    } else {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function settingsClientEvents(client) {
+                client.on('authen', function (res) {
+                    console.log('on authen: ', res);
+                    if (res.r === 0) {
+                        $('#loggedUserId').html(res.userId);
+                        $('#loggedUserId').css('color', 'blue');
+                        $('#joinBtn').attr('disabled', 'disabled');
+
+                        if (!room) {
+                            testPublish(false);
+                        }
+                    }
+                });
+
+                client.on('disconnect', function () {
+                    console.log('++++++++++++++ disconnected');
+                });
+
+                client.on('requestnewtoken', function () {
+                    console.log('++++++++++++++ requestnewtoken+++++++++');
+                    getAccessTokenAndConnectToStringee(client)
+                });
+            }
+
+            function getAccessTokenAndConnectToStringee(client) {
+                getTokenUrl = getTokenUrl + "?userId=" + userId + "&roomId=" + roomId;
+                $.getJSON(getTokenUrl, function (res) {
+                    var access_token = res.access_token;
+                    client.connect(access_token);
+
+                    roomToken = res.room_token;
+                    console.log('roomToken: ', roomToken);
+                });
+            }
+
+            $(document).ready(function () {
+                $('#joinBtn').removeAttr('disabled');
+            });
+
+            function testJoin() {
+                userId = $('#userId').val();
+                if (userId.length === 0) {
+                    alert('Please enter your user ID');
+                    return;
+                }
+
+                if (!stringeeClient) {
+                    stringeeClient = new StringeeClient();
+                    settingsClientEvents(stringeeClient);
+                    getAccessTokenAndConnectToStringee(stringeeClient);
+                } else {
+                    testPublish(false);
+                }
+            }
+
+            function subscribe(trackInfo) {
+                var subOptions = {
+                    audio: true,
+                    video: true
+                };
+
+                room.subscribe(trackInfo.serverId, subOptions).then(function (track) {
+                    console.log('subscribe success: ', track);
+
+                    subscribedTracks.push(track);
+
+                    track.on('ready', function () {
+                        console.log('track on ready');
+
+                        var videoElement = track.attach();
+                        videoElement.setAttribute("style", "width: 300px;background: #424141;padding: 5px;height: 200px;margin: 5px");
+                        videoElement.setAttribute("controls", "true");
+
+                        if (isSafari()) {
+                            videoElement.setAttribute("muted", "true");
+                        }
+
+                        document.body.appendChild(videoElement);
+                    });
+                }).catch(function (res) {
+                    console.log('subscribe ERROR: ', res);
+                });
+            }
+
+            function testPublish(screenSharing) {
+                var videoDimensions = $('#videoDimensions').val();
+                console.log('videoDimensions: ' + videoDimensions);
+                if (videoDimensions == '720p') {
+                    videoDimensions = {
+                        width: {
+                            min: "1280",
+                            max: "1280"
+                        },
+                        height: {
+                            min: "720",
+                            max: "720"
+                        }
+                    };
+                } else if (videoDimensions == '480p') {
+                    videoDimensions = {
+                        width: {
+                            min: "854",
+                            max: "854"
+                        },
+                        height: {
+                            min: "480",
+                            max: "480"
+                        }
+                    };
+                } else if (videoDimensions == '360p') {
+                    videoDimensions = {
+                        width: {
+                            min: "640",
+                            max: "640"
+                        },
+                        height: {
+                            min: "360",
+                            max: "360"
+                        }
+                    };
+                } else if (videoDimensions == '240p') {
+                    videoDimensions = {
+                        width: {
+                            min: "426",
+                            max: "426"
+                        },
+                        height: {
+                            min: "240",
+                            max: "240"
+                        }
+                    };
+                }
+
+                var pubOptions = {
+                    audio: true,
+                    video: true,
+                    screen: screenSharing,
+                    videoDimensions: videoDimensions
+                };
+
+                StringeeVideo.createLocalVideoTrack(stringeeClient, pubOptions).then(function (localTrack1) {
+                    console.log('create Local Video Track success: ', localTrack1);
+                    localTracks.push(localTrack1);
+
+                    //play local video
+                    var videoElement = localTrack1.attach();
+                    videoElement.setAttribute("style", "width: 300px;background: black;padding: 5px;height: 200px;margin: 5px");
+                    videoElement.setAttribute("controls", "true");
+                    document.body.appendChild(videoElement);
+
+                    StringeeVideo.joinRoom(stringeeClient, roomToken).then(function (data) {
+                        console.log('join room success data: ', data);
+                        $('#shareScreenBtn').removeAttr('disabled');
+                        $('#leaveBtn').removeAttr('disabled');
+
+                        $('#muteBtn').removeAttr('disabled');
+                        $('#disableVideoBtn').removeAttr('disabled');
+
+                        $('#joinBtn').attr('disabled', 'disabled');
+
+                        room = data.room;
+
+                        //room events
+                        room.clearAllOnMethos();
+                        room.on('joinroom', function (event) {
+                            console.log('on join room: ' + JSON.stringify(event.info));
+                        });
+                        room.on('leaveroom', function (event) {
+                            console.log('on leave room: ' + JSON.stringify(event.info));
+                        });
+                        room.on('message', function (event) {
+                            console.log('on message: ' + JSON.stringify(event.info));
+                        });
+                        room.on('addtrack', function (event) {
+                            console.log('on add track: ' + JSON.stringify(event.info));
+                            var local = false;
+                            localTracks.forEach(function (localTrack2) {
+                                if (localTrack2.serverId === event.info.track.serverId) {
+                                    console.log(localTrack2.serverId + ' is LOCAL');
+                                    local = true;
+                                }
+                            });
+                            if (!local) {
+                                subscribe(event.info.track);
+                            }
+                        });
+                        room.on('removetrack', function (event) {
+                            console.log('on remove track', event);
+                            var track = event.track;
+                            if (!track) {
+                                return;
+                            }
+
+                            var mediaElements = track.detach();
+                            mediaElements.forEach(function (videoElement) {
+                                videoElement.remove();
+                            });
+                        });
+
+                        room.publish(localTrack1).then(function () {
+                            console.log('publish Local Video Track success: ' + localTrack1.serverId);
+                        }).catch(function (error1) {
+                            console.log('publish Local Video Track ERROR: ', error1);
+                        });
+
+                        data.listTracksInfo.forEach(function (trackInfo) {
+                            subscribe(trackInfo);
+                        });
+                    }).catch(function (res) {
+                        console.log('join room ERROR: ', res);
+                    });
+                }).catch(function (res) {
+                    console.log('create Local Video Track ERROR: ', res);
+                    showStatus(res.name + ": " + res.message);
+                });
+            }
+
+            function testUnpublish() {
+                console.log('Unpublish');
+                localTracks.forEach(function (localTrack) {
+                    room.unpublish(localTrack);
+
+                    localTrack.detachAndRemove();
+                });
+            }
+
+            function testHangupCall() {
+                localTracks.forEach(function (localTrack) {
+                    localTrack.close();
+                });
+            }
+
+            function testLeave() {
+                room.leave(true);
+
+                localTracks.forEach(function (track) {
+                    track.close();
+                    track.detachAndRemove();
+                });
+                subscribedTracks.forEach(function (track) {
+                    track.detachAndRemove();
+                });
+
+                localTracks = [];
+                subscribedTracks = [];
+
+                $('#shareScreenBtn').attr('disabled', 'disabled');
+                $('#leaveBtn').attr('disabled', 'disabled');
+
+                $('#muteBtn').attr('disabled', 'disabled');
+                $('#disableVideoBtn').attr('disabled', 'disabled');
+
+                $('#joinBtn').removeAttr('disabled');
+            }
+
+            function sendMsg() {
+                var msg = {
+                    a: 'b',
+                    c: 1,
+                    d: ['1', '2', '3']
+                };
+                room.sendMessage(msg).then(function () {
+                    console.log('send ok');
+                }).catch(function (e) {
+                    console.log('send error', e);
+                });
+            }
+
+            function showStatus(txtStatus) {
+                $('#txtStatus').html(txtStatus);
+            }
+
+            function testMute() {
+                localTracks.forEach(function (track) {
+                    if (track.muted) {
+                        //unmute
+                        console.log('unmute');
+                        track.mute(false);
+                        $('#muteBtn').html('Mute');
+                    } else {
+                        //mute
+                        console.log('mute');
+                        track.mute(true);
+                        $('#muteBtn').html('Unmute');
+                    }
+                });
+            }
+
+            function testDisableVideo() {
+                localTracks.forEach(function (track) {
+                    if (track.localVideoEnabled) {
+                        //disable
+                        track.enableLocalVideo(false);
+                        $('#disableVideoBtn').html('Enable local video');
+                    } else {
+                        //enable
+                        track.enableLocalVideo(true);
+                        $('#disableVideoBtn').html('Disable local video');
+                    }
+                });
+            }
+        </script>
+    </head>
+
+    <body>
+
+        <div>
+            <input id="userId" type="text" name="toUsername" style="width: 200px;" placeholder="Your userID" value="huy">
+
+            <select id="videoDimensions">
+                <option value="720p">720p (1280x720)</option>
+                <option value="480p">480p (854x480)</option>
+                <option value="360p">360p (640x360)</option>
+                <option value="240p">240p (426x240)</option>
+            </select>
+
+            <button id="joinBtn" onclick="testJoin()" disabled="">Join room</button>
+
+            <button id="shareScreenBtn" onclick="testPublish(true)" disabled="">Share Screen</button>
+
+
+            <button id="muteBtn" onclick="testMute()" disabled="">Mute</button>
+            <button id="disableVideoBtn" onclick="testDisableVideo()" disabled="">Disable local video</button>
+
+
+            <button id="leaveBtn" onclick="testLeave()" disabled="">Leave room</button>
+
+            Logged in: <span id="loggedUserId" style="color: red">Not logged</span> |
+            Status: <span id="txtStatus" style="color: red">Not started</span>
+        </div>
+
+        <div id="videos"></div>
+
+    </body>
+
+</html>
