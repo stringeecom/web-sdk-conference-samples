@@ -193,6 +193,7 @@ StringeeVideo.createLocalVideoTrack(stringeeClient, pubOptions).then(function (l
 	var videoElement = localTrack1.attach();
 	videoElement.setAttribute("style", "width: 300px;background: black;padding: 5px;height: 200px;margin: 5px");
 	videoElement.setAttribute("controls", "true");
+	videoElement.setAttribute("playsinline", true);
 	document.body.appendChild(videoElement);
 
 	StringeeVideo.joinRoom(stringeeClient, roomToken).then(function (data) {
