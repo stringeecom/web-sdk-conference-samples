@@ -4,8 +4,8 @@ include 'FirebaseJWT/JWT.php';
 
 use \Firebase\JWT\JWT;
 
-$apiKeySid = '';
-$apiKeySecret = '';
+$apiKeySid = 'YOUR_KEY_SID';
+$apiKeySecret = 'YOUR_KEY_SECRET';
 
 
 
