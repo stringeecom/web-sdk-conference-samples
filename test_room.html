@@ -48,6 +48,10 @@
                 getTokenUrl = './php/token_test.php';
                 roomId = 'room-vn-1-05FMPGG6CQ-1624604370606';
                 //https://test-portal.stringeev-local.com:8080/en/share/atb-kypg-bzs?pwd=ghskunvreipyqcxbmfltoadzw
+            } else if (server === 'test217') {
+                roomId = 'room-vn-1-1D2YSVDO3B-1626453899389';
+                STRINGEE_SERVER_ADDRS = ['wss://test217.stringee.com:36899/', 'wss://test217.stringee.com:36899/'];
+                getTokenUrl = './php/token_test217.php';
             }
 
             function isSafari() {
@@ -100,8 +104,8 @@
             function getAccessTokenAndConnectToStringee(client) {
                 getTokenUrl = getTokenUrl + "?userId=" + userId + "&roomId=" + roomId;
                 console.log('getAccessTokenAndConnectToStringee', getTokenUrl);
-                
-                
+
+
                 $.getJSON(getTokenUrl, function (res) {
                     console.log('res', res);
                     var access_token = res.access_token;
@@ -117,6 +121,7 @@
 
             $(document).ready(function () {
                 $('#loginBtn').removeAttr('disabled');
+                $('#sdkVersion').html(StringeeUtil.version().version + '_build_' + StringeeUtil.version().build);
 
                 $("#listCameras").change(function () {
                     selectedCameraId = $("#listCameras").val();
@@ -132,7 +137,7 @@
                 $("#listMicrophones").change(function () {
                     selectedMicrophoneId = $("#listMicrophones").val();
                     localStorage.setItem("selectedMicrophoneId", selectedMicrophoneId);
-                    
+
                     if (!localTrack22) {
                         return;
                     }
@@ -141,7 +146,7 @@
                 $("#listSpeakers").change(function () {
                     selectedSpeakerId = $("#listSpeakers").val();
                     localStorage.setItem("selectedSpeakerId", selectedSpeakerId);
-                    
+
                     subscribedTracks.forEach(track => {
                         track.routeAudioToSpeaker(selectedSpeakerId);
                     });
@@ -149,7 +154,7 @@
                 $("#videoDimensions").change(function () {
                     var videoDimensions = $('#videoDimensions').val();
                     console.log('videoDimensions===' + videoDimensions);
-                    
+
                     var newOptions = {
                         video: true,
                         screen: false,
@@ -236,6 +241,12 @@
                     videoDimensions: getVideoWH()
                 };
 
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    // true for mobile device
+                    $('#switchCameraBtn').removeAttr('disabled');
+                    pubOptions.mobileCamera = "front";//| "back"
+                }//=> OK voi Chrome tren Android
+
                 if (selectedCameraId) {
                     pubOptions.videoDeviceId = selectedCameraId;
                 }
@@ -250,9 +261,22 @@
                     console.log('++++++++++StringeeVideo.devices', data);
                     renderDevicesInfo(data);
                 });
+                
+                localTrack22.on('changedevice', function (data) {
+                    console.log('++++++++++localTrack22 changedevice', data);
+                    if(data.type === 'both' || data.type === 'video'){
+                        var videoElements = localTrack22.detach();
+                        videoElements.forEach(element => {
+                            element.srcObject = null;
+                            element.srcObject = localTrack22.webrtc.localStream;
+                        });
+                    }
+                });
 
                 var promiseLocalTrackInit = localTrack22.init();
                 promiseLocalTrackInit.then(function (localTrack1) {
+                    localTracks.push(localTrack1);
+
                     //ready for publish
                     $('#joinBtn').removeAttr('disabled');
                     $('#checkDeviceBtn').attr('disabled', 'disabled');
@@ -262,6 +286,12 @@
                     videoElement.setAttribute("style", "width: 300px;background: black;padding: 5px;height: 200px;margin: 5px");
                     videoElement.setAttribute("controls", "true");
                     document.body.appendChild(videoElement);
+
+                    if (localTrack1.webrtc.localStream.getVideoTracks().length > 0) {
+                        $('#disableVideoBtn').html('Disable local video');
+                    } else {
+                        $('#disableVideoBtn').html('Enable local video');
+                    }
 
                 }).catch(function (res) {
                     console.log('create Local Video Track ERROR: name=' + res.name + "; res.message=" + res.message);
@@ -304,7 +334,7 @@
 
             function testPublish(localTrack1) {
                 console.log('create Local Video Track success: ', localTrack1);
-                localTracks.push(localTrack1);
+//                localTracks.push(localTrack1);
 
                 if (!room) {
                     joinRoomAndSubAllTracks().then(function () {
@@ -395,7 +425,7 @@
                      };
                      
                      */
-                }else{
+                } else {
                     videoDimensions = {
                         width: {
                             min: "160",
@@ -406,7 +436,7 @@
                             max: "120"
                         }
                     };
-                    
+
                     //160x120
                 }
                 return videoDimensions;
@@ -424,6 +454,9 @@
                         $('#joinBtn').attr('disabled', 'disabled');
                         $('#disableRemoteVideosBtn').removeAttr('disabled');
                         $('#disableRemoteAudiosBtn').removeAttr('disabled');
+
+//                        $('#switchCameraBtn').removeAttr('disabled');
+
                         $('#txtStatus').html('Joined, Permission control room: ' + data.room.permissionControlRoom);
 
                         room = data.room;
@@ -632,6 +665,8 @@
                         return;
                     }
 
+                    console.log('hien tai track.localVideoEnabled=' + track.localVideoEnabled);
+
                     if (track.localVideoEnabled) {
                         //disable
                         track.enableLocalVideo(false);
@@ -643,6 +678,16 @@
                     }
                 });
             }
+
+            function switchCamera() {
+                localTracks.forEach(function (track) {
+                    if (track.screen) {
+                        return;
+                    }
+
+                    track.switchCamera();
+                });
+            }
         </script>
     </head>
 
@@ -651,7 +696,8 @@
         <div>
             <input id="userId" type="text" name="toUsername" style="width: 200px;" placeholder="Your userID" value="ACBTYKKO5L">
             <button id="loginBtn" onclick="login()" disabled="">Login</button>
-            Logged in: <span id="loggedUserId" style="color: red">Not logged</span>
+            Logged in: <span id="loggedUserId" style="color: red">Not logged</span> |
+            SdkVersion: <span id="sdkVersion" style="color: blue"></span>
         </div>
         <div>
             <br>
@@ -685,13 +731,14 @@
             <button id="shareScreenBtn" onclick="testShare()" disabled="">Share Screen</button>
 
 
-            <button id="muteBtn" onclick="testMute()" disabled="">Mute</button>
+            <button id="muteBtn" onclick="testMute()">Mute</button>
 
             <button id="disableRemoteVideosBtn" onclick="testDisableRemoteVideosBtn()" disabled="">Disable all remote videos</button>
             <button id="disableRemoteAudiosBtn" onclick="testDisableRemoteAudiosBtn()" disabled="">Disable all remote audios</button>
 
-            <button id="disableVideoBtn" onclick="testDisableVideo()" disabled="">Disable local video</button>
+            <button id="disableVideoBtn" onclick="testDisableVideo()">Disable local video</button>
 
+            <button id="switchCameraBtn" onclick="switchCamera()" disabled="">Switch Camera (mobile only)</button>
 
             <button id="leaveBtn" onclick="testLeave()" disabled="">Leave room</button>
 
