@@ -88,7 +88,7 @@ VERIFY SIGNATURE:
 1. Add Stringee Sdk vào source của bạn
 ```
 <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
-<script type="text/javascript" src="https://cdn.stringee.com/sdk/web/2.2.1/stringee-web-sdk.min.js"></script>
+<script type="text/javascript" src="https://cdn.stringee.com/sdk/web/latest/stringee-web-sdk.min.js"></script>
 ```
 
 
