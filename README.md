@@ -3,20 +3,20 @@ Sample demo Stringee video conference
 ## Demo
 https://v2.stringee.com/web-sdk-conference-samples/test_room.html
 
-### Step 1: Chuẩn bị
+### Step 1: Preparation
 
-1. Để sử dụng Stringee Video Api thì bạn phải có 1 tài khoản Stringee. Nếu chưa có tài khoản Stringee, thì thực hiện đăng ký tài khoản tại https://developer.stringee.com/account/register
-2. Tạo 1 project trên https://developer.stringee.com/project
-
-
+1. In order to use Stringee Video Api you have to have a Stringee account. If you haven't got one, please sign up at  https://developer.stringee.com/account/register
+2. Create a project on https://developer.stringee.com/project
 
 
-### Step 2: Api quản lý room
-0. Sinh access token để gọi rest api theo hướng dẫn https://developer.stringee.com/docs/call-rest-api/call-rest-api-authentication
-(Để test có thể truy cập vào Dashboard -> Tools -> Generate Access token. (Authentication: chọn Rest API Authentication)
 
 
-1. Tạo room (thay ACCESS_TOKEN = access token sinh ra ở bước 0)
+### Step 2: Room management APIs
+0. Follow this guide to generate an access token to call the rest api https://developer.stringee.com/docs/call-rest-api/call-rest-api-authentication
+(For testing purposes, you can go to Dashboard -> Tools -> Generate Access token. (Authentication: choose Rest API Authentication)
+
+
+1. Create room (change ACCESS_TOKEN = access token generated from the previous step)
 ```
 curl -i -X POST \
    -H "Content-Type:application/json" \
@@ -51,9 +51,9 @@ curl -i -X PUT \
 
 
 
-### Step 3. Tích hợp sdk vào web
+### Step 3. Intergrate sdk to the website
 
-0. Sinh roomtoken với định dạng jwt như sau gửi về cho client để thực hiện join room (chi tiết tham khảo file php\token_pro.php ở sample đính kèm)
+0. Generate roomtoken with the following jwt format and send it to the client to join the room (for details, refer to the file php\token_pro.php in the attached sample)
 
 ```
 HEADER:
@@ -85,33 +85,33 @@ VERIFY SIGNATURE:
     
 ```
 	
-1. Add Stringee Sdk vào source của bạn
+1. Add Stringee SDK to your source
 ```
 <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
 <script type="text/javascript" src="https://cdn.stringee.com/sdk/web/latest/stringee-web-sdk.min.js"></script>
 ```
 
 
-2. Sinh access token để connect vào StringeeServer
-- Cho mục đích test, bạn có thể truy cập  Dashboard -> Tools -> Generate Access token and generates an access_token.
-- Cho mục đích production: tham khảo https://developer.stringee.com/docs/client-authentication
+2. Generate access token to connect to StringeeServer
+- For testing purposes, you can go to Dashboard -> Tools -> Generate Access token and generates an access_token.
+- For production environment please refer to the following guide https://developer.stringee.com/docs/client-authentication
 
 
-3. Kết nối
+3. Connection
 ```
 var stringeeClient;
 client.connect(access_token);
 ```
 
-Các sự kiện
-- Khi kết nối tới StringeeServer
+Events
+- When connecting to StringeeServer
 ```
 client.on('connect', function () {
     console.log('connected');
 });
 ```
 
-- Khi xác  thực thành công 
+- When the authentication is successful
 ```
 client.on('authen', function (res) {
     console.log('authen', res);
@@ -119,7 +119,7 @@ client.on('authen', function (res) {
 });
 ```
 
-- Khi disconnect với StringeeServer
+- When disconnecting from StringeeServer
 ```
 client.on('disconnect', function () {
     console.log('disconnected');
@@ -181,7 +181,7 @@ if (videoDimensions == '720p') {
 var pubOptions = {
 	audio: true,
 	video: true,
-	screen: screenSharing,//screenSharing = true nếu là share màn hình, = false nếu người dùng join room
+	screen: screenSharing,//screenSharing = true if the user is sharing their screen, = false if the user is joining the room
 	videoDimensions: videoDimensions
 };
 
@@ -208,25 +208,25 @@ StringeeVideo.createLocalVideoTrack(stringeeClient, pubOptions).then(function (l
 
 		room = data.room;
 
-		//room events
+		// room events
 		room.clearAllOnMethos();
 		
-		//Su kien joinroom
+		// joinroom event
 		room.on('joinroom', function (event) {
 			console.log('on join room: ' + JSON.stringify(event.info));
 		});
 		
-		//Su kien leave room
+		// leave room event
 		room.on('leaveroom', function (event) {
 			console.log('on leave room: ' + JSON.stringify(event.info));
 		});
 		
-		//Su kien leave room
+		// message event
 		room.on('message', function (event) {
 			console.log('on message: ' + JSON.stringify(event.info));
 		});
 		
-		//Su kien addtrack khi co them nguoi khac join room
+		// add track event when other people join the room
 		room.on('addtrack', function (event) {
 			console.log('on add track: ' + JSON.stringify(event.info));
 			var local = false;
@@ -241,7 +241,7 @@ StringeeVideo.createLocalVideoTrack(stringeeClient, pubOptions).then(function (l
 			}
 		});
 		
-		//Su kien removetrack khi co them nguoi khac leave room
+		// remove track event when other people leave the room
 		room.on('removetrack', function (event) {
 			console.log('on remove track', event);
 			var track = event.track;
@@ -255,14 +255,14 @@ StringeeVideo.createLocalVideoTrack(stringeeClient, pubOptions).then(function (l
 			});
 		});
 
-		//publish Track cua chinh minh vao room
+		//publish our own track into the room
 		room.publish(localTrack1).then(function () {
 			console.log('publish Local Video Track success: ' + localTrack1.serverId);
 		}).catch(function (error1) {
 			console.log('publish Local Video Track ERROR: ', error1);
 		});
 
-		//subscribe video cua nhung nguoi join room truoc
+		//subscribe to videos of people who have joined before
 		data.listTracksInfo.forEach(function (trackInfo) {
 			subscribe(trackInfo);
 		});
