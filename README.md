@@ -17,7 +17,7 @@ https://v2.stringee.com/web-sdk-conference-samples/test_room.html
 
 
 1. Create room (change ACCESS_TOKEN = access token generated from the previous step)
-```
+```bash
 curl -i -X POST \
    -H "Content-Type:application/json" \
    -H "X-STRINGEE-AUTH:ACCESS_TOKEN" \
@@ -30,14 +30,14 @@ curl -i -X POST \
  ```
  
 2. List room
-```
+```bash
  curl -i -X GET \
    -H "X-STRINGEE-AUTH:ACCESS_TOKEN" \
  'https://api.stringee.com/v1/room2/list'
 ```
 
 3. Delete room
-```
+```bash
 curl -i -X PUT \
    -H "X-STRINGEE-AUTH:ACCESS_TOKEN" \
    -H "Content-Type:application/json" \
@@ -86,7 +86,7 @@ VERIFY SIGNATURE:
 ```
 	
 1. Add Stringee SDK to your source
-```
+```js
 <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
 <script type="text/javascript" src="https://cdn.stringee.com/sdk/web/latest/stringee-web-sdk.min.js"></script>
 ```
@@ -98,21 +98,21 @@ VERIFY SIGNATURE:
 
 
 3. Connection
-```
+```js
 var stringeeClient;
 client.connect(access_token);
 ```
 
 Events
 - When connecting to StringeeServer
-```
+```js
 client.on('connect', function () {
     console.log('connected');
 });
 ```
 
 - When the authentication is successful
-```
+```js
 client.on('authen', function (res) {
     console.log('authen', res);
     $('#loggedUserId').html(res.userId);
@@ -120,7 +120,7 @@ client.on('authen', function (res) {
 ```
 
 - When disconnecting from StringeeServer
-```
+```js
 client.on('disconnect', function () {
     console.log('disconnected');
 });
@@ -129,7 +129,7 @@ client.on('disconnect', function () {
 
 
 4. Join room
-```
+```js
 var videoDimensions = $('#videoDimensions').val();
 console.log('videoDimensions: ' + videoDimensions);
 if (videoDimensions == '720p') {
